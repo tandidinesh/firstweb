@@ -1,50 +1,77 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>दिनेश</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to right, #6dd5fa, #2980b9);
-      color: wight;
-      text-align: center;
-      padding: 50px;
-    }
-    h1 {
-      font-size: 50px;
-      margin-bottom: 10px;
-    }
-    p {
-      font-size: 20px;
-      margin-bottom: 30px;
-    }
-    button {
-      background: wight;
-      color: #2980b9;
-      border: none;
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 30px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #f1c40f;
-      color: #2c3e50;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greeting Card</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            /* Background को और आकर्षक बनाया गया है */
+            background: linear-gradient(to right, #ff9a9e, #fad0c4); 
+            margin: 0;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            /* Box Shadow से 3D इफ़ेक्ट आता है */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: scale(1.05); /* माउस ले जाने पर कार्ड थोड़ा बड़ा होगा */
+        }
+        h1 {
+            color: #ff6f61;
+            font-size: 40px;
+        }
+        p {
+            font-size: 20px;
+            margin: 20px 0;
+            min-height: 40px; /* मैसेज बदलने पर लेआउट न बिगड़े */
+        }
+        button {
+            background: #ff6f61;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #ff3b2f;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+    </style>
 </head>
 <body>
-  <h1>👋 नमस्ते दुनिया!</h1>
-  <p>यह मेरी पहली वेबसाइट है जो मैंने GitHub पर बनाई 🎉</p>
-  <button onclick="alert('क्या हाल है.. 🚀')">मुझे दबाएं</button>
+    <div class="card">
+        <h1>🎉 Happy Birthday! 🎉</h1>
+        <p id="message">तुम्हारे लिए ढेर सारी शुभकामनाएँ! 🥳</p>
+        <button onclick="showSurprise()">Click for Surprise 🎁</button>
+    </div>
+
+    <script>
+        function showSurprise() {
+            const messages = [
+                "🎂 Cake time! Enjoy your day! 🍰",
+                "🎁 Hope you get all your wishes! 🌟",
+                "🥳 Party like a rockstar! 🎉",
+                "💖 Sending lots of love and hugs! 🤗",
+                "🥳 जन्मदिन की हार्दिक शुभकामनाएँ! 🎈"
+            ];
+
+            const randomIndex = Math.floor(Math.random() * messages.length);
+            document.getElementById("message").innerText = messages[randomIndex];
+        }
+    </script>
 </body>
 </html>
-
-
-
-
-
-
