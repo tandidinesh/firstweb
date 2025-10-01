@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Emoji Name Maker — Create an attractive emoji for your name</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --card:#0b1220;
+      --accent:#f59e0b;
+      --muted:#94a3b8;
+    }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#071029 0%, #0c1724 100%);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:28px}
+    .wrap{width:100%;max-width:1000px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:22px;box-shadow:0 8px 30px rgba(2,6,23,0.7)}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 16px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
+    .card{background:rgba(255,255,255,0.02);padding:14px;border-radius:12px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text], select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    button{background:linear-gradient(90deg,var(--accent),#ff7a18);border:none;padding:10px 12px;border-radius:10px;color:#041027;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
+    .preview-area{display:flex;flex-direction:column;align-items:center;gap:12px}
+    .canvas-wrap{width:320px;height:320px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff6cc,#ffd2a6);box-shadow:0 10px 30px rgba(2,6,23,0.45);}
+    canvas{border-radius:50%;}
+    .small{font-size:13px;color:var(--muted)}
+    .option-row{display:flex;gap:8px;margin-top:10px}
+    .range{width:100%}
+    .file-input{display:flex;gap:8px;align-items:center}
+    .footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.preview-area{order:-1}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Emoji Name Maker</h1>
+    <p class="lead">Type your name (or upload a clear face photo). This page generates an attractive, sticker-style circular emoji you can download as PNG.</p>
+
+    <div class="grid">
+      <div class="card">
+        <label for="name">Your name (letters will be used as initials)</label>
+        <input id="name" type="text" placeholder="Type your name — e.g. Dinesh Tandi" />
+
+        <div class="option-row">
+          <div style="flex:1">
+            <label for="palette">Color palette</label>
+            <select id="palette">
+              <option value="sunny">Sunny (warm)</option>
+              <option value="ocean">Ocean (cool)</option>
+              <option value="pastel">Pastel</option>
+              <option value="neon">Neon</option>
+            </select>
+          </div>
+          <div style="width:130px">
+            <label for="style">Style</label>
+            <select id="style">
+              <option value="initials">Initials</option>
+              <option value="face">From Photo</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Upload a photo (front-facing for best face result)</label>
+          <div class="file-input">
+            <input id="photo" type="file" accept="image/*" />
+            <button id="clearPhoto" class="ghost">Clear</button>
+          </div>
+          <div class="small">Photo is optional — if no photo, the generator will make a stylized initial emoji.</div>
+        </div>
+
+        <div style="margin-top:14px">
+          <label for="emojiSize">Emoji size (px)</label>
+          <input id="emojiSize" type="number" min="128" max="1200" value="800" />
+        </div>
+
+        <div style="margin-top:12px">
+          <label for="posterize">Cartoon posterize (for photo)</label>
+          <input id="posterize" type="range" min="2" max="12" value="6" class="range" />
+        </div>
+
+        <div class="controls">
+          <button id="generate">Generate Emoji</button>
+          <button id="download" class="ghost">Download PNG</button>
+          <button id="randomize" class="ghost">Randomize</button>
+        </div>
+
+        <div class="footer">Tip: Use a clear frontal face photo or a short name (2 words) for best-looking initials.</div>
+      </div>
+
+      <div class="card preview-area">
+        <div style="text-align:center">
+          <div class="canvas-wrap">
+            <canvas id="emojiCanvas" width="320" height="320"></canvas>
+          </div>
+        </div>
+        <div style="width:100%;display:flex;gap:8px;justify-content:center">
+          <div class="small">Preview — click <strong>Generate Emoji</strong> to update. Use <strong>Download PNG</strong> to save.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Helper utilities
+    function pickPalette(name){
+      const palettes = {
+        sunny:['#FFD86B','#FFB84D','#FF7A18'],
+        ocean:['#7AD0FF','#4FB6FF','#1E88FF'],
+        pastel:['#FDD6E3','#CFE8FF','#D6F5D6'],
+        neon:['#FF5EDF','#7CFF6B','#00E5FF']
+      };
+      return palettes[name] || palettes.sunny;
+    }
+
+    function randomFrom(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+    // DOM
+    const nameInput = document.getElementById('name');
+    const paletteSelect = document.getElementById('palette');
+    const styleSelect = document.getElementById('style');
+    const photoInput = document.getElementById('photo');
+    const clearPhotoBtn = document.getElementById('clearPhoto');
+    const emojiSizeInput = document.getElementById('emojiSize');
+    const posterizeRange = document.getElementById('posterize');
+
+    const generateBtn = document.getElementById('generate');
+    const downloadBtn = document.getElementById('download');
+    const randomBtn = document.getElementById('randomize');
+
+    const canvas = document.getElementById('emojiCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let uploadedImage = null;
+
+    photoInput.addEventListener('change', (e)=>{
+      const f = e.target.files && e.target.files[0];
+      if(!f) return; const url = URL.createObjectURL(f);
+      const img = new Image(); img.onload = ()=>{uploadedImage = img;}; img.src = url;
+    });
+    clearPhotoBtn.addEventListener('click', ()=>{photoInput.value='';uploadedImage=null;alert('Photo cleared');});
+
+    function posterizeImage(imageCanvas, levels){
+      const w = imageCanvas.width; const h = imageCanvas.height; const c = imageCanvas.getContext('2d');
+      const imgd = c.getImageData(0,0,w,h); const d=imgd.data; const step = 255/(levels-1);
+      for(let i=0;i<d.length;i+=4){ d[i]=Math.round(d[i]/step)*step; d[i+1]=Math.round(d[i+1]/step)*step; d[i+2]=Math.round(d[i+2]/step)*step; }
+      c.putImageData(imgd,0,0);
+    }
+
+    function drawInitialsEmoji({text='A', palette=['#FFD86B','#FFB84D'], size=320}){
+      const s=size; canvas.width=s; canvas.height=s; ctx.clearRect(0,0,s,s);
+      // Base circle with gradient
+      const r=s/2-6; const cx=s/2; const cy=s/2;
+      const g=ctx.createLinearGradient(0,0,0,s); g.addColorStop(0,palette[0]); g.addColorStop(1,palette[1]||palette[0]);
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+      // Drop shadow outline
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=10; ctx.stroke();
+      // Inner circle glossy
+      const innerR = r*0.72; const ig=ctx.createRadialGradient(cx - innerR*0.2, cy - innerR*0.35, 1, cx, cy, innerR); ig.addColorStop(0,'rgba(255,255,255,0.22)'); ig.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.beginPath(); ctx.arc(cx,cy,innerR,0,Math.PI*2); ctx.fillStyle=ig; ctx.fill();
+      // initials
+      ctx.fillStyle = '#04202A'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      // choose bold font size based on length
+      const initials = (text||'A').trim().split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
+      let fontSize = Math.floor(innerR*0.9);
+      if(initials.length===2) fontSize = Math.floor(innerR*0.62);
+      ctx.font = `700 ${fontSize}px system-ui, Arial`;
+      ctx.fillText(initials, cx, cy+2);
+      // small sparkles
+      for(let i=0;i<3;i++){ ctx.beginPath(); const ang=Math.random()*Math.PI*2; const rr=innerR*0.9; const x=cx+Math.cos(ang)*rr*0.5; const y=cy+Math.sin(ang)*rr*0.5; ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.arc(x,y,Math.random()*6+2,0,Math.PI*2); ctx.fill(); }
+    }
+
+    function drawPhotoEmoji({image, size=320, palette=['#FFD86B','#FFB84D'], posterize=6}){
+      const s=size; canvas.width=s; canvas.height=s; ctx.clearRect(0,0,s,s);
+      const r=s/2-6; const cx=s/2; const cy=s/2;
+      // base circle
+      const g=ctx.createLinearGradient(0,0,0,s); g.addColorStop(0,palette[0]); g.addColorStop(1,palette[1]||palette[0]);
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+      // draw cropped face into temp canvas
+      // compute crop - center crop square from image based on min dimension
+      const minSide = Math.min(image.width, image.height);
+      const sx = (image.width - minSide)/2; const sy=(image.height-minSide)/2; const sw=minSide; const sh=minSide;
+      const tmp = document.createElement('canvas'); tmp.width=tmp.height= s*0.82; const tctx=tmp.getContext('2d');
+      tctx.drawImage(image, sx, sy, sw, sh, 0,0,tmp.width,tmp.height);
+      // posterize for cartoon effect
+      try{ posterizeImage(tmp, Math.max(2, Math.min(12, posterize))); }catch(e){}
+      // clip to circle and draw
+      ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,r-6,0,Math.PI*2); ctx.clip();
+      // draw centered with slight scale to fit
+      const dx = cx - tmp.width/2; const dy = cy - tmp.height/2; ctx.drawImage(tmp, dx, dy);
+      ctx.restore();
+      // stylized eyes/mouth overlay to make it emoji-like
+      const faceW = tmp.width*0.55; const faceH = faceW; const faceX = cx; const faceY = cy - s*0.02;
+      const ex = faceX - faceW*0.25; const ex2 = faceX + faceW*0.25; const ey = faceY - faceH*0.18; const eR = Math.max(8, faceW*0.08);
+      function drawEye(x,y,r){ ctx.beginPath(); ctx.ellipse(x,y,r*1.1,r,0,0,Math.PI*2); ctx.fillStyle='#ffffff'; ctx.fill(); ctx.beginPath(); ctx.arc(x,y,r*0.5,0,Math.PI*2); ctx.fillStyle='#111111'; ctx.fill(); ctx.beginPath(); ctx.arc(x-r*0.25,y-r*0.25, Math.max(2,r*0.18),0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fill(); }
+      drawEye(ex,ey,eR); drawEye(ex2,ey,eR);
+      // mouth
+      ctx.beginPath(); const mw = faceW*0.5; const mx = faceX; const my = faceY + faceH*0.28; ctx.lineWidth = Math.max(6, mw*0.08); ctx.lineCap='round'; ctx.strokeStyle='#1b1b1b'; ctx.arc(mx,my,mw/2, Math.PI*0.2, Math.PI*0.8, false); ctx.stroke();
+      // cheeks
+      ctx.beginPath(); ctx.fillStyle='rgba(255,120,120,0.18)'; ctx.arc(ex - eR*0.4, ey + eR*0.7, eR*0.9,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(ex2 + eR*0.4, ey + eR*0.7, eR*0.9,0,Math.PI*2); ctx.fill();
+      // outer sticker edge
+      ctx.beginPath(); ctx.arc(cx,cy,r-2,0,Math.PI*2); ctx.lineWidth=10; ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.stroke();
+    }
+
+    function generate(){
+      const style = styleSelect.value; const palette = pickPalette(paletteSelect.value);
+      const size = parseInt(emojiSizeInput.value)||800; const posterize = parseInt(posterizeRange.value)||6;
+      // set canvas CSS size for preview (keep small)
+      const previewSize = 320; canvas.style.width = previewSize+'px'; canvas.style.height = previewSize+'px';
+      if(style==='initials' || !uploadedImage){
+        const name = nameInput.value || 'You'; drawInitialsEmoji({text:name, palette:palette, size:previewSize});
+      } else {
+        // use photo mode
+        drawPhotoEmoji({image:uploadedImage, size:previewSize, palette:palette, posterize:posterize});
+      }
+      // also prepare high-res hidden canvas for download
+      prepareHighResForDownload();
+    }
+
+    function prepareHighResForDownload(){
+      const style = styleSelect.value; const palette = pickPalette(paletteSelect.value); const size = parseInt(emojiSizeInput.value)||800; const posterize = parseInt(posterizeRange.value)||6;
+      // create temp canvas
+      const tmp = document.createElement('canvas'); tmp.width=tmp.height=size; const t = tmp.getContext('2d');
+      // We'll reuse draw logic but with temporary ctx swap
+      // To simplify, we'll monkeypatch canvas & ctx temporarily
+      const oldCanvas = canvas; const oldCtx = ctx;
+      // create a fake canvas context by using tmp
+      // For simplicity, we'll call specialized drawing functions adapted for temp ctx
+      function drawInitialsHigh(){
+        const s=size; const cx=s/2; const cy=s/2; t.clearRect(0,0,s,s);
+        const r=s/2-6; const g=t.createLinearGradient(0,0,0,s); g.addColorStop(0,palette[0]); g.addColorStop(1,palette[1]||palette[0]); t.beginPath(); t.arc(cx,cy,r,0,Math.PI*2); t.fillStyle=g; t.fill(); t.beginPath(); t.arc(cx,cy,r,0,Math.PI*2); t.lineWidth=10; t.strokeStyle='rgba(0,0,0,0.12)'; t.stroke();
+        const innerR = r*0.72; const ig=t.createRadialGradient(cx - innerR*0.2, cy - innerR*0.35, 1, cx, cy, innerR); ig.addColorStop(0,'rgba(255,255,255,0.22)'); ig.addColorStop(1,'rgba(255,255,255,0)'); t.beginPath(); t.arc(cx,cy,innerR,0,Math.PI*2); t.fillStyle=ig; t.fill();
+        const initials = (nameInput.value||'A').trim().split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase(); let fontSize = Math.floor(innerR*0.9); if(initials.length===2) fontSize = Math.floor(innerR*0.62);
+        t.fillStyle = '#04202A'; t.textAlign='center'; t.textBaseline='middle'; t.font = `700 ${fontSize}px system-ui, Arial`; t.fillText(initials, cx, cy+2);
+      }
+      function drawPhotoHigh(){
+        const s=size; const cx=s/2; const cy=s/2; t.clearRect(0,0,s,s);
+        const r=s/2-6; const g=t.createLinearGradient(0,0,0,s); g.addColorStop(0,palette[0]); g.addColorStop(1,palette[1]||palette[0]); t.beginPath(); t.arc(cx,cy,r,0,Math.PI*2); t.fillStyle=g; t.fill();
+        const image = uploadedImage; if(!image){ drawInitialsHigh(); return; }
+        const minSide = Math.min(image.width, image.height); const sx=(image.width-minSide)/2; const sy=(image.height-minSide)/2;
+        const tmp2 = document.createElement('canvas'); tmp2.width=tmp2.height = Math.floor(s*0.82); const t2 = tmp2.getContext('2d'); t2.drawImage(image, sx, sy, minSide, minSide, 0,0,tmp2.width,tmp2.height);
+        // posterize
+        try{ const imgd = t2.getImageData(0,0,tmp2.width,tmp2.height); const d=imgd.data; const step=255/(posterize-1); for(let i=0;i<d.length;i+=4){ d[i]=Math.round(d[i]/step)*step; d[i+1]=Math.round(d[i+1]/step)*step; d[i+2]=Math.round(d[i+2]/step)*step; } t2.putImageData(imgd,0,0);}catch(e){}
+        t.save(); t.beginPath(); t.arc(cx,cy,r-6,0,Math.PI*2); t.clip(); const dx = cx - tmp2.width/2; const dy = cy - tmp2.height/2; t.drawImage(tmp2, dx, dy); t.restore();
+        const faceW = tmp2.width*0.55; const faceX = cx; const faceY = cy - s*0.02; const ex = faceX - faceW*0.25; const ex2 = faceX + faceW*0.25; const ey = faceY - faceW*0.18; const eR = Math.max(8, faceW*0.08);
+        function drawEyeHigh(x,y,r){ t.beginPath(); t.ellipse(x,y,r*1.1,r,0,0,Math.PI*2); t.fillStyle='#ffffff'; t.fill(); t.beginPath(); t.arc(x,y,r*0.5,0,Math.PI*2); t.fillStyle='#111111'; t.fill(); t.beginPath(); t.arc(x-r*0.25,y-r*0.25, Math.max(2,r*0.18),0,Math.PI*2); t.fillStyle='rgba(255,255,255,0.9)'; t.fill(); }
+        drawEyeHigh(ex,ey,eR); drawEyeHigh(ex2,ey,eR); t.beginPath(); const mw = faceW*0.5; const mx = faceX; const my = faceY + faceW*0.28; t.lineWidth = Math.max(6, mw*0.08); t.lineCap='round'; t.strokeStyle='#1b1b1b'; t.arc(mx,my,mw/2, Math.PI*0.2, Math.PI*0.8, false); t.stroke(); t.beginPath(); t.fillStyle='rgba(255,120,120,0.18)'; t.arc(ex - eR*0.4, ey + eR*0.7, eR*0.9,0,Math.PI*2); t.fill(); t.beginPath(); t.arc(ex2 + eR*0.4, ey + eR*0.7, eR*0.9,0,Math.PI*2); t.fill(); t.beginPath(); t.arc(cx,cy,r-2,0,Math.PI*2); t.lineWidth=10; t.strokeStyle='rgba(0,0,0,0.06)'; t.stroke();
+      }
+      if(styleSelect.value==='initials' || !uploadedImage) drawInitialsHigh(); else drawPhotoHigh();
+      // store dataURL on download button attribute
+      downloadBtn._dataURL = tmp.toDataURL('image/png');
+    }
+
+    generateBtn.addEventListener('click', ()=>{ if(styleSelect.value==='face' && !uploadedImage){ if(!confirm('You selected "From Photo" but no photo uploaded. Continue and create initials instead?')) return; } generate(); alert('Preview generated — if you want full-resolution PNG, click Download PNG'); });
+
+    downloadBtn.addEventListener('click', ()=>{
+      // ensure high-res exists
+      prepareHighResForDownload();
+      const data = downloadBtn._dataURL || canvas.toDataURL('image/png'); const a=document.createElement('a'); a.href=data; a.download = (nameInput.value?nameInput.value.replace(/\s+/g,'_'):'my_emoji') + '.png'; a.click();
+    });
+
+    randomBtn.addEventListener('click', ()=>{
+      const names = ['Amit Kumar','Dinesh Tandi','Priya','Ravi Patel','Ananya S']; nameInput.value = randomFrom(names);
+      paletteSelect.value = randomFrom(['sunny','ocean','pastel','neon']); styleSelect.value = randomFrom(['initials','face']); // randomize
+      if(styleSelect.value==='face'){}; alert('Randomized — click Generate');
+    });
+
+    // generate initial sample on load
+    window.addEventListener('load', ()=>{ nameInput.value='Your Name'; generate(); });
+  </script>
+</body>
+</html>
